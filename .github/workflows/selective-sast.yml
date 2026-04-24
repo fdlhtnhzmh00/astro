@@ -2,6 +2,9 @@ name: Selective-SAST Experiment
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   selective-sast:
