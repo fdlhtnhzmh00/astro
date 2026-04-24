@@ -1,0 +1,51 @@
+name: Selective-SAST Experiment
+
+on:
+  workflow_dispatch:
+
+jobs:
+  selective-sast:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Start timer
+        run: echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Detect changed JS/TS files
+        run: |
+          git diff --name-only HEAD~1 HEAD > changed_files.txt
+          grep -E '\.(js|jsx|ts|tsx)$' changed_files.txt > sast_files.txt || true
+          echo "Changed files:"
+          cat changed_files.txt
+          echo "Files selected for SAST:"
+          cat sast_files.txt || true
+
+      - name: Run Selective Semgrep Scan
+        run: |
+          python -m pip install semgrep
+          if [ -s sast_files.txt ]; then
+            semgrep scan --config=p/javascript --json --output=selective_sast_result.json $(cat sast_files.txt) || true
+          else
+            echo '{"results":[],"message":"No JS/TS files changed"}' > selective_sast_result.json
+          fi
+
+      - name: End timer
+        run: |
+          END_TIME=$(date +%s)
+          EXECUTION_TIME=$((END_TIME - START_TIME))
+          echo "SELECTIVE_SAST_TIME=$EXECUTION_TIME" >> $GITHUB_ENV
+          echo "Selective-SAST execution time: $EXECUTION_TIME seconds"
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: selective-sast-result
+          path: |
+            selective_sast_result.json
+            changed_files.txt
+            sast_files.txt

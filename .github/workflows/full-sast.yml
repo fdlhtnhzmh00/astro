@@ -1,0 +1,33 @@
+name: Full-SAST Baseline
+
+on:
+  workflow_dispatch:
+
+jobs:
+  full-sast:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Start timer
+        run: echo "START_TIME=$(date +%s)" >> $GITHUB_ENV
+
+      - name: Run Full Semgrep Scan
+        run: |
+          python -m pip install semgrep
+          semgrep scan --config=p/javascript --json --output=full_sast_result.json || true
+
+      - name: End timer
+        run: |
+          END_TIME=$(date +%s)
+          EXECUTION_TIME=$((END_TIME - START_TIME))
+          echo "FULL_SAST_TIME=$EXECUTION_TIME" >> $GITHUB_ENV
+          echo "Full-SAST execution time: $EXECUTION_TIME seconds"
+
+      - name: Upload result
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-sast-result
+          path: full_sast_result.json
